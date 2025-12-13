@@ -21,23 +21,23 @@ Napisałem tego bota, żeby:
 - **NumPy** - obliczenia
 
 ### 🛠️ Co już działa?
-- [x] Konfiguracja środowiska Python 3.12.9
-- [x] Struktura projektu (foldery, venv)
-- [x] Instalacja bibliotek (NLTK, scikit-learn, NumPy)
-- [x] Plik intents.json z 6 kategoriami (powitanie, pożegnanie, ceny okien, ceny drzwi, pomiar, kontakt)
-- [x] Wczytywanie danych JSON
-- [x] Pętla rozmowy (ciągła konwersacja)
-- [x] Obsługa nieznanych pytań
-- [x] Ignorowanie wielkości liter
-- [x] Losowe odpowiedzi z puli
-- [x] Dopasowanie częściowe (rozumie dłuższe zdania)
+- Konfiguracja środowiska Python 3.12.9
+- Struktura projektu (foldery, venv)
+- Instalacja bibliotek (NLTK, scikit-learn, NumPy)
+- Plik intents.json z 6 kategoriami (powitanie, pożegnanie, ceny okien, ceny drzwi, pomiar, kontakt)
+- Wczytywanie danych JSON
+- Pętla rozmowy (ciągła konwersacja)
+- Obsługa nieznanych pytań
+- Ignorowanie wielkości liter
+- Losowe odpowiedzi z puli
+- Dopasowanie częściowe (rozumie dłuższe zdania)
 
 ### 🚧 Co jeszcze chcę dodać? (To-Do)
-- [ ] **Etap 1** - ~~Podstawy chatbota~~ ✅ UKOŃCZONE
-- [ ] **Etap 2** - Rozbudowa bazy wiedzy (więcej intencji)
-- [ ] **Etap 3** - Uczenie maszynowe (klasyfikacja tekstu)
-- [ ] **Etap 4** - Interfejs webowy
-- [ ] **Etap 5** - Rozszerzenia
+- **Etap 1** - ~~Podstawy chatbota~~ ✅ UKOŃCZONE
+- **Etap 2** - Rozbudowa bazy wiedzy (więcej intencji)
+- **Etap 3** - Uczenie maszynowe (klasyfikacja tekstu)
+- **Etap 4** - Interfejs webowy
+- **Etap 5** - Rozszerzenia
 
 ### 🚀 Jak uruchomić?
 1. Sklonuj repozytorium
@@ -55,6 +55,6 @@ Napisałem tego bota, żeby:
 ### 📫 Kontakt
 Jeśli masz pytania do kodu albo uwagi (każde Code Review mile widziane!), znaleźć mnie można tutaj:
 
-**LinkedIn**:
-**Autor**: Kajhol (Student Informatyki, Politechnika Śląska, 3 rok)
+- **LinkedIn**:
+- **Autor**: Kajhol (Student Informatyki, Politechnika Śląska, 3 rok)
 *Śledź to repozytorium, żeby zobaczyć postępy!*
