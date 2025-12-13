@@ -56,5 +56,5 @@ Napisałem tego bota, żeby:
 Jeśli masz pytania do kodu albo uwagi (każde Code Review mile widziane!), znaleźć mnie można tutaj:
 
 - **LinkedIn**:
-- **Autor**: Kajhol (Student Informatyki, Politechnika Śląska, 3 rok)
+- **Autor**: Kajhol (Student Informatyki, Politechnika Śląska, 3 rok)  
 *Śledź to repozytorium, żeby zobaczyć postępy!*
