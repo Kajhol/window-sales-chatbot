@@ -70,7 +70,7 @@ I want to help salespeople in window industry by:
 Questions or code review? Find me here:
 
 - LinkedIn: https://www.linkedin.com/in/kajetan-hołdan-9b4a503a0/
-- Author: Kajhol (Computer Science Student, Silesian University of Technology, 3rd year)/
+- Author: Kajhol (Computer Science Student, Silesian University of Technology, 3rd year)
   
 ---
 
