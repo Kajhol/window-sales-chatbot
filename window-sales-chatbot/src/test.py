@@ -2,8 +2,8 @@ import nltk
 import sklearn
 import numpy
 
-print("NLTK wersja:", nltk.__version__)
-print("Scikit-learn wersja:", sklearn.__version__)
-print("NumPy wersja:", numpy.__version__)
+print("NLTK version:", nltk.__version__)
+print("Scikit-learn version:", sklearn.__version__)
+print("NumPy version:", numpy.__version__)
 print("")
-print("Wszystko działa poprawnie!")
+print("Everything works correctly!")
