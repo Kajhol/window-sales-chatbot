@@ -5,14 +5,14 @@ import json
 import random
 import os
 
-# Tworzymy aplikację FastAPI
+# Create FastAPI application
 app = FastAPI(
     title="Window Sales Chatbot API",
-    description="API dla chatbota sprzedającego okna i drzwi",
+    description="API for window and door sales chatbot",
     version="0.3"
 )
 
-# Dodajemy CORS - pozwala stronie HTML łączyć się z API
+# Add CORS - allows frontend to connect to API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,75 +21,75 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Wczytanie danych z intents.json
-katalog_skryptu = os.path.dirname(os.path.abspath(__file__))
-sciezka_pliku = os.path.join(katalog_skryptu, '..', 'data', 'intents.json')
+# Load data from intents.json
+script_directory = os.path.dirname(os.path.abspath(__file__))
+file_path = os.path.join(script_directory, '..', 'data', 'intents.json')
 
-with open(sciezka_pliku, "r", encoding="utf-8") as plik:
-    dane = json.load(plik)
+with open(file_path, "r", encoding="utf-8") as file:
+    data = json.load(file)
 
-intencje = dane["intents"]
+intents = data["intents"]
 
-# Modele danych
-class Pytanie(BaseModel):
-    tekst: str
+# Data models
+class Question(BaseModel):
+    text: str
 
-class Odpowiedz(BaseModel):
+class Answer(BaseModel):
     bot: str
-    znaleziono: bool
+    found: bool
 
-# Funkcja logiki chatbota
-def znajdz_odpowiedz(tekst_uzytkownika: str) -> dict:
-    tekst_uzytkownika = tekst_uzytkownika.lower()
+# Chatbot logic function
+def find_response(user_text: str) -> dict:
+    user_text = user_text.lower()
     
-    for intencja in intencje:
-        for wzorzec in intencja["patterns"]:
-            if wzorzec.lower() in tekst_uzytkownika:
-                odpowiedz = random.choice(intencja["responses"])
+    for intent in intents:
+        for pattern in intent["patterns"]:
+            if pattern.lower() in user_text:
+                response = random.choice(intent["responses"])
                 return {
-                    "bot": odpowiedz,
-                    "znaleziono": True
+                    "bot": response,
+                    "found": True
                 }
     
     return {
         "bot": "Przepraszam, nie rozumiem. Spróbuj zapytać o: ceny okien, ceny drzwi, pomiar, kontakt.",
-        "znaleziono": False
+        "found": False
     }
 
-#Strona główna
+# ENDPOINT 1: Home page
 @app.get("/")
-def strona_glowna():
+def home():
     return {
         "status": "online",
-        "wiadomosc": "Window Sales Chatbot API",
-        "wersja": "0.3",
-        "dokumentacja": "/docs"
+        "message": "Window Sales Chatbot API",
+        "version": "0.3",
+        "documentation": "/docs"
     }
 
-#Rozmowa z botem
-@app.post("/chat", response_model=Odpowiedz)
-def rozmawiaj(pytanie: Pytanie):
-    odpowiedz = znajdz_odpowiedz(pytanie.tekst)
-    return odpowiedz
+# ENDPOINT 2: Chat with bot
+@app.post("/chat", response_model=Answer)
+def chat(question: Question):
+    response = find_response(question.text)
+    return response
 
-#Informacje
+# ENDPOINT 3: Information
 @app.get("/info")
-def informacje():
+def info():
     return {
-        "projekt": "Window Sales Chatbot",
-        "autor": "Kajetan Hołdan",
-        "uczelnia": "Politechnika Śląska",
-        "rok": 3,
-        "liczba_intencji": len(intencje)
+        "project": "Window Sales Chatbot",
+        "author": "Kajetan Holdan",
+        "university": "Silesian University of Technology",
+        "year": 3,
+        "intents_count": len(intents)
     }
 
-#Lista dostępnych tematów
-@app.get("/intencje")
-def lista_intencji():
-    tematy = []
-    for intencja in intencje:
-        tematy.append({
-            "tag": intencja["tag"],
-            "przyklady": intencja["patterns"][:3]
+# ENDPOINT 4: List of available topics
+@app.get("/intents")
+def list_intents():
+    topics = []
+    for intent in intents:
+        topics.append({
+            "tag": intent["tag"],
+            "examples": intent["patterns"][:3]
         })
-    return {"tematy": tematy}
+    return {"topics": topics}

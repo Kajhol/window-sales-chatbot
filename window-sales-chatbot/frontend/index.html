@@ -6,41 +6,41 @@
 <body>
     <h1>Chatbot - Okna i Drzwi</h1>
     
-    <div id="wiadomosci">
+    <div id="messages">
         <p><b>Bot:</b> Cześć! W czym mogę pomóc?</p>
     </div>
     
-    <input type="text" id="pole" placeholder="Napisz wiadomość...">
-    <button onclick="wyslij()">Wyślij</button>
+    <input type="text" id="input" placeholder="Napisz wiadomość...">
+    <button onclick="send()">Wyślij</button>
 
     <script>
-        function wyslij() {
-            //Pobierz tekst z pola
-            var pole = document.getElementById("pole");
-            var tekst = pole.value;
+        function send() {
+            //1. Get text from input field
+            var input = document.getElementById("input");
+            var text = input.value;
             
-            //Sprawdź czy nie jest puste
-            if (tekst == "") {
+            //2. Check if not empty
+            if (text == "") {
                 alert("Wpisz coś!");
                 return;
             }
             
-            //Dodaj wiadomość użytkownika do ekranu
-            var wiadomosci = document.getElementById("wiadomosci");
-            wiadomosci.innerHTML += "<p><b>Ty:</b> " + tekst + "</p>";
+            //3. Add user message to screen
+            var messages = document.getElementById("messages");
+            messages.innerHTML += "<p><b>Ty:</b> " + text + "</p>";
             
-            //Wyczyść pole
-            pole.value = "";
+            //4. Clear input field
+            input.value = "";
             
-            //Wyślij do API i pokaż odpowiedź
+            //5. Send to API and show response
             fetch("http://127.0.0.1:8000/chat", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({tekst: tekst})
+                body: JSON.stringify({text: text})
             })
             .then(response => response.json())
             .then(data => {
-                wiadomosci.innerHTML += "<p><b>Bot:</b> " + data.bot + "</p>";
+                messages.innerHTML += "<p><b>Bot:</b> " + data.bot + "</p>";
             });
         }
     </script>

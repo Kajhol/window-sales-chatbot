@@ -2,39 +2,38 @@ import json
 import random
 import os
 
-# Ustalanie poprawnej ścieżki (to musi zostać, żeby widział plik)
-katalog_skryptu = os.path.dirname(os.path.abspath(__file__))
-sciezka_pliku = os.path.join(katalog_skryptu, '..', 'data', 'intents.json')
+# Set correct path to intents file
+script_directory = os.path.dirname(os.path.abspath(__file__))
+file_path = os.path.join(script_directory, '..', 'data', 'intents.json')
 
-# Wczytywanie danych bez sprawdzania błędów
-with open(sciezka_pliku, "r", encoding="utf-8") as plik:
-    dane = json.load(plik)
+# Load data
+with open(file_path, "r", encoding="utf-8") as file:
+    data = json.load(file)
 
-intencje = dane["intents"]
+intents = data["intents"]
 
-print("Bot: Witaj! Napisz 'quit' aby zakończyć.")
+print("Bot: Witaj! Wpisz 'quit' aby zakończyć.")
 
-# Pętla rozmowy
+# Conversation loop
 while True:
-    tekst_uzytkownika = input("Ty: ")
-    tekst_uzytkownika = tekst_uzytkownika.lower()
+    user_text = input("Ty: ")
+    user_text = user_text.lower()
     
-    if tekst_uzytkownika == "quit":
+    if user_text == "quit":
         print("Bot: Do widzenia!")
         break
     
-    znaleziono = False
+    found = False
     
-    for intencja in intencje:
-        for wzorzec in intencja["patterns"]:
-            # Dodano .lower() do wzorca dla pewności
-            if wzorzec.lower() in tekst_uzytkownika:
-                odpowiedz = random.choice(intencja["responses"])
-                print("Bot:", odpowiedz)
-                znaleziono = True
+    for intent in intents:
+        for pattern in intent["patterns"]:
+            if pattern.lower() in user_text:
+                response = random.choice(intent["responses"])
+                print("Bot:", response)
+                found = True
                 break
-        if znaleziono:
+        if found:
             break
     
-    if not znaleziono:
+    if not found:
         print("Bot: Przepraszam, nie rozumiem. Spróbuj inaczej.")
