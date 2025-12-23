@@ -17,9 +17,6 @@
             margin-bottom: 15px;
             background: #f9f9f9;
         }
-        #messages p {
-            margin: 10px 0;
-        }
         #messages a {
             color: #0066cc;
             text-decoration: underline;
@@ -27,8 +24,13 @@
         #messages a:hover {
             color: #004499;
         }
+        .input-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
         #input {
-            width: 70%;
+            flex: 1;
             padding: 10px;
             font-size: 16px;
         }
@@ -36,6 +38,27 @@
             padding: 10px 20px;
             font-size: 16px;
             cursor: pointer;
+        }
+        #micButton {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
+        }
+        #micButton:hover {
+            background: #45a049;
+        }
+        #micButton.recording {
+            background: #f44336;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
         }
         .bot-message {
             background: #e3f2fd;
@@ -50,21 +73,130 @@
             margin: 5px 0;
             text-align: right;
         }
+        .button-row {
+            display: flex;
+            gap: 10px;
+        }
+        #status {
+            color: #666;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .mic-info {
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
     <h1>WAFAM - Asystent Klienta</h1>
     
+    <div class="mic-info" id="micInfo" style="display: none;">
+        🎤 Mikrofon działa najlepiej w przeglądarce Chrome lub Edge.
+    </div>
+    
     <div id="messages">
         <div class="bot-message"><b>Bot:</b> Cześć! Jestem asystentem firmy WAFAM. W czym mogę pomóc?</div>
     </div>
     
-    <input type="text" id="input" placeholder="Napisz wiadomość...">
-    <button onclick="send()">Wyślij</button>
-    <button onclick="clearChat()">Nowa rozmowa</button>
+    <div class="input-container">
+        <input type="text" id="input" placeholder="Napisz wiadomość lub kliknij mikrofon...">
+        <button id="micButton" onclick="toggleMic()">🎤</button>
+    </div>
+    
+    <div class="button-row">
+        <button onclick="send()">Wyślij</button>
+        <button onclick="clearChat()">Nowa rozmowa</button>
+    </div>
+    
+    <div id="status"></div>
 
     <script>
         var sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
+        var recognition = null;
+        var isRecording = false;
+        
+        // Sprawdź czy przeglądarka obsługuje rozpoznawanie mowy
+        var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.lang = 'pl-PL';
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            
+            recognition.onresult = function(event) {
+                var text = event.results[0][0].transcript;
+                document.getElementById('input').value = text;
+                document.getElementById('status').innerText = 'Rozpoznano: "' + text + '"';
+                stopRecording();
+                
+                // Automatyczne wysyłanie po rozpoznaniu
+                setTimeout(function() {
+                    send();
+                }, 500);
+            };
+            
+            recognition.onerror = function(event) {
+                var errorMessage = 'Błąd rozpoznawania mowy: ';
+                switch(event.error) {
+                    case 'no-speech':
+                        errorMessage += 'Nie wykryto mowy. Spróbuj ponownie.';
+                        break;
+                    case 'audio-capture':
+                        errorMessage += 'Nie znaleziono mikrofonu.';
+                        break;
+                    case 'not-allowed':
+                        errorMessage += 'Dostęp do mikrofonu został zablokowany. Zezwól na dostęp w ustawieniach przeglądarki.';
+                        break;
+                    default:
+                        errorMessage += event.error;
+                }
+                document.getElementById('status').innerText = errorMessage;
+                stopRecording();
+            };
+            
+            recognition.onend = function() {
+                stopRecording();
+            };
+        } else {
+            document.getElementById('micButton').style.display = 'none';
+            document.getElementById('micInfo').style.display = 'block';
+            document.getElementById('micInfo').innerText = '⚠️ Twoja przeglądarka nie obsługuje rozpoznawania mowy. Użyj Chrome lub Edge.';
+        }
+        
+        function toggleMic() {
+            if (!recognition) {
+                alert('Twoja przeglądarka nie obsługuje rozpoznawania mowy. Użyj Chrome lub Edge.');
+                return;
+            }
+            
+            if (isRecording) {
+                recognition.stop();
+                stopRecording();
+            } else {
+                try {
+                    recognition.start();
+                    startRecording();
+                } catch(e) {
+                    document.getElementById('status').innerText = 'Błąd: ' + e.message;
+                }
+            }
+        }
+        
+        function startRecording() {
+            isRecording = true;
+            document.getElementById('micButton').classList.add('recording');
+            document.getElementById('status').innerText = '🎤 Słucham... Mów teraz!';
+        }
+        
+        function stopRecording() {
+            isRecording = false;
+            document.getElementById('micButton').classList.remove('recording');
+        }
         
         function convertLinks(text) {
             var regex = /\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g;
@@ -73,10 +205,9 @@
         
         function send() {
             var input = document.getElementById("input");
-            var text = input.value;
+            var text = input.value.trim();
             
             if (text == "") {
-                alert("Wpisz coś!");
                 return;
             }
             
@@ -84,6 +215,7 @@
             messages.innerHTML += '<div class="user-message"><b>Ty:</b> ' + text + '</div>';
             
             input.value = "";
+            document.getElementById('status').innerText = 'Przetwarzam...';
             
             fetch("http://127.0.0.1:8000/chat", {
                 method: "POST",
@@ -100,6 +232,10 @@
                 var botResponse = convertLinks(data.bot);
                 messages.innerHTML += '<div class="bot-message"><b>Bot:</b> ' + botResponse + '</div>';
                 messages.scrollTop = messages.scrollHeight;
+                document.getElementById('status').innerText = '';
+            })
+            .catch(function(error) {
+                document.getElementById('status').innerText = 'Błąd połączenia z serwerem.';
             });
         }
         
@@ -113,6 +249,7 @@
             .then(function(data) {
                 document.getElementById("messages").innerHTML = '<div class="bot-message"><b>Bot:</b> Cześć! Jestem asystentem firmy WAFAM. W czym mogę pomóc?</div>';
                 sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
+                document.getElementById('status').innerText = '';
             });
         }
         
