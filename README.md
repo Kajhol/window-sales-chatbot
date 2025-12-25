@@ -52,20 +52,22 @@ I want to help salespeople in window industry by:
 - GPT-4o-mini model connected
 - Natural language understanding
 - Context-aware responses
-- Conversation memory
 
-### Stage 5 - RAG Knowledge Base (COMPLETED)
+### Stage 5 - Advanced RAG (COMPLETED)
 - Company knowledge base (wafam_oferta.txt)
-- Product information (windows, doors, shutters, garage doors)
-- Color database for all products
-- Pricing inquiry workflow
-- Contact information and social media links
-- FAQ responses
+- Text chunking (56 fragments)
+- OpenAI embeddings (text-embedding-3-small)
+- ChromaDB vector database
+- Semantic search
+- Conversation memory
+- Topic tracking
+- Optimized token usage
 
 ### Stage 6 - To Do
-- Advanced RAG with embeddings
+- Conversation logging
+- Lead collection
+- Admin panel
 - Deployment to cloud
-- Integration with company website
 
 ## How to run?
 
@@ -88,7 +90,7 @@ venv\Scripts\activate
 
 ### Step 4: Install dependencies
 ```bash
-pip install fastapi uvicorn python-multipart openai python-dotenv
+pip install fastapi uvicorn openai python-dotenv langchain langchain-openai langchain-community chromadb
 ```
 
 ### Step 5: Create .env file
@@ -96,13 +98,20 @@ Create file .env in window-sales-chatbot folder:
 OPENAI_API_KEY=your-api-key-here  
 Get your API key from: https://platform.openai.com/api-keys
 
-### Step 6: Run API server
+### Step 6: Build knowledge base (first time only)
+```bash
+cd window-sales-chatbot/src  
+python prepare_knowledge.py  
+python build_vectordb.py
+```
+
+### Step 7: Run API server
 ```bash
 cd window-sales-chatbot/src
 uvicorn api:app --reload
 ```
 
-### Step 7: Open frontend
+### Step 8: Open frontend
 Open in browser: window-sales-chatbot/frontend/index.html
 
 ## 📫 Contact
