@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
 import os
+import re
 
 # Wczytaj klucz API
 env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
@@ -87,6 +88,9 @@ conversation_topics = {}
 # Pamięć zebranych danych do wyceny
 collected_data = {}
 
+# Lista zebranych leadów (telefony, emaile)
+leads = []
+
 # Modele danych
 class Message(BaseModel):
     text: str
@@ -157,6 +161,7 @@ def build_conversation_context(session_id: str) -> str:
     return ""
 
 # Funkcja aktualizacji zebranych danych
+# Funkcja aktualizacji zebranych danych
 def update_collected_data(session_id: str, message: str):
     if session_id not in collected_data:
         collected_data[session_id] = {}
@@ -172,6 +177,21 @@ def update_collected_data(session_id: str, message: str):
         collected_data[session_id]["produkt"] = "rolety"
     elif any(word in message_lower for word in ["brama", "bramy", "garaż"]):
         collected_data[session_id]["produkt"] = "bramy"
+    
+    # Wykryj numer telefonu (9 cyfr)
+    phone_match = re.search(r'\b\d{3}[\s-]?\d{3}[\s-]?\d{3}\b', message)
+    if phone_match:
+        phone = phone_match.group().replace(" ", "").replace("-", "")
+        collected_data[session_id]["telefon"] = phone
+        
+        # Zapisz lead
+        lead = {
+            "telefon": phone,
+            "produkt": collected_data[session_id].get("produkt", "nieznany"),
+            "session_id": session_id
+        }
+        leads.append(lead)
+        print(f"Nowy lead: {lead}")
 
 # Funkcja rozszerzająca krótkie pytania
 def expand_query_with_context(user_message: str, session_id: str) -> str:
@@ -316,4 +336,12 @@ def info():
         "author": "Kajetan Holdan",
         "version": "2.6",
         "features": ["RAG", "Intent Detection", "Context Memory", "Data Collection"]
+    }
+
+# ENDPOINT: Lista leadów
+@app.get("/leads")
+def get_leads():
+    return {
+        "total": len(leads),
+        "leads": leads
     }
