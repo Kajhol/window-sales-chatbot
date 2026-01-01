@@ -5,8 +5,10 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import Chroma
+from datetime import datetime
 import os
 import re
+import json
 
 # Wczytaj klucz API
 env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
@@ -18,6 +20,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 # Wczytaj bazę wektorową
 script_dir = os.path.dirname(os.path.abspath(__file__))
 chroma_dir = os.path.join(script_dir, '..', 'knowledge_base')
+leads_file = os.path.join(script_dir, '..', 'data', 'leads.json')
 
 embeddings = OpenAIEmbeddings(
     model="text-embedding-3-small",
@@ -36,7 +39,7 @@ print("Baza wektorowa załadowana!")
 app = FastAPI(
     title="WAFAM Chatbot API",
     description="AI Chatbot with Advanced RAG",
-    version="2.6"
+    version="2.7"
 )
 
 app.add_middleware(
@@ -47,7 +50,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# System prompt - KRÓTKI ale SKUTECZNY
+# System prompt
 SYSTEM_PROMPT = """Jesteś asystentem WAFAM (okna, drzwi, rolety, bramy) ze Świętochłowic.
 
 JAK ODPOWIADAĆ:
@@ -75,9 +78,11 @@ KONTAKT: Marcin 603693023, Aleksandra 693375868 | inwestycje@wafam.pl | ul. Chor
 
 SOCIAL MEDIA:
 - Facebook: [WAFAM na Facebooku](https://www.facebook.com/WafamOknaPcv)
-- Opinie Google: [Zobacz opinie](https://www.google.com/maps/place/Wafam+Fabryka+Okien/@50.3050299,18.8892615,18z/data=!3m1!5s0x4716d2a8ee3ce311:0x390f303738ceddca!4m8!3m7!1s0x4716d2a8b8f8fb6f:0x81202c6977db6ea7!8m2!3d50.3050289!4d18.8900286!9m1!1b1!16s%2Fg%2F1tgpwykp?entry=ttu&g_ep=EgoyMDI1)
+- Opinie Google: [Zobacz opinie](https://maps.google.com/?q=WAFAM+Świętochłowice)
 
-POMIAR: Umawiamy bezpłatny pomiar. Potrzebujemy: miejscowość, kontakt, kiedy pasuje termin."""
+POMIAR: Umawiamy bezpłatny pomiar. Potrzebujemy: miejscowość, kontakt, kiedy pasuje termin.
+
+GDY KLIENT PODA TELEFON LUB EMAIL: Podziękuj i potwierdź że handlowiec oddzwoni/odpisze w ciągu 24h."""
 
 # Pamięć rozmów
 conversations = {}
@@ -88,8 +93,74 @@ conversation_topics = {}
 # Pamięć zebranych danych do wyceny
 collected_data = {}
 
-# Lista zebranych leadów (telefony, emaile)
-leads = []
+# LEADY
+
+def load_leads():
+    """Wczytaj leady z pliku JSON"""
+    if os.path.exists(leads_file):
+        with open(leads_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return []
+
+def save_leads(leads_list):
+    """Zapisz leady do pliku JSON"""
+    with open(leads_file, 'w', encoding='utf-8') as f:
+        json.dump(leads_list, f, ensure_ascii=False, indent=2)
+
+def add_lead(phone: str = None, email: str = None, product: str = None, session_id: str = None):
+    """Dodaj nowy lead"""
+    leads_list = load_leads()
+    
+    # Sprawdź czy lead już istnieje
+    for lead in leads_list:
+        if phone and lead.get("phone") == phone:
+            return False
+        if email and lead.get("email") == email:
+            return False
+    
+    # Dodaj nowy lead
+    new_lead = {
+        "id": len(leads_list) + 1,
+        "phone": phone,
+        "email": email,
+        "product": product or "nieznany",
+        "session_id": session_id,
+        "created_at": datetime.now().strftime("%Y-%m-%d %H:%M"),
+        "status": "nowy"
+    }
+    
+    leads_list.append(new_lead)
+    save_leads(leads_list)
+    print(f"Nowy lead #{new_lead['id']}: {phone or email} - {product}")
+    return True
+
+def detect_contact_info(message: str):
+    """Wykryj telefon lub email w wiadomości"""
+    result = {"phone": None, "email": None}
+    
+    # Wykryj telefon (9 cyfr, różne formaty)
+    phone_patterns = [
+        r'\b\d{3}[\s-]?\d{3}[\s-]?\d{3}\b',
+        r'\b\d{9}\b',
+        r'\+48[\s-]?\d{3}[\s-]?\d{3}[\s-]?\d{3}\b'
+    ]
+    
+    for pattern in phone_patterns:
+        phone_match = re.search(pattern, message)
+        if phone_match:
+            phone = re.sub(r'[\s\-\+]', '', phone_match.group())
+            if phone.startswith('48'):
+                phone = phone[2:]
+            result["phone"] = phone
+            break
+    
+    # Wykryj email
+    email_match = re.search(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', message)
+    if email_match:
+        result["email"] = email_match.group().lower()
+    
+    return result
+
 
 # Modele danych
 class Message(BaseModel):
@@ -108,7 +179,6 @@ def search_knowledge(query: str, k: int = 2):
     sources = []
     
     for doc, score in results:
-        # Tylko fragmenty z dobrym dopasowaniem (score < 0.5)
         if score < 0.8:
             content = doc.page_content[:400]
             contexts.append(content)
@@ -153,14 +223,15 @@ def build_conversation_context(session_id: str) -> str:
         context_parts.append(f"Produkt: {data['produkt']}")
     if "miejscowosc" in data:
         context_parts.append(f"Miejscowość: {data['miejscowosc']}")
-    if "wymiary" in data:
-        context_parts.append(f"Wymiary: {data['wymiary']}")
+    if "telefon" in data:
+        context_parts.append(f"Telefon: {data['telefon']}")
+    if "email" in data:
+        context_parts.append(f"Email: {data['email']}")
     
     if context_parts:
         return "ZEBRANE DANE: " + ", ".join(context_parts)
     return ""
 
-# Funkcja aktualizacji zebranych danych
 # Funkcja aktualizacji zebranych danych
 def update_collected_data(session_id: str, message: str):
     if session_id not in collected_data:
@@ -178,20 +249,24 @@ def update_collected_data(session_id: str, message: str):
     elif any(word in message_lower for word in ["brama", "bramy", "garaż"]):
         collected_data[session_id]["produkt"] = "bramy"
     
-    # Wykryj numer telefonu (9 cyfr)
-    phone_match = re.search(r'\b\d{3}[\s-]?\d{3}[\s-]?\d{3}\b', message)
-    if phone_match:
-        phone = phone_match.group().replace(" ", "").replace("-", "")
-        collected_data[session_id]["telefon"] = phone
-        
-        # Zapisz lead
-        lead = {
-            "telefon": phone,
-            "produkt": collected_data[session_id].get("produkt", "nieznany"),
-            "session_id": session_id
-        }
-        leads.append(lead)
-        print(f"Nowy lead: {lead}")
+    # Wykryj kontakt (telefon/email)
+    contact_info = detect_contact_info(message)
+    
+    if contact_info["phone"]:
+        collected_data[session_id]["telefon"] = contact_info["phone"]
+        add_lead(
+            phone=contact_info["phone"],
+            product=collected_data[session_id].get("produkt"),
+            session_id=session_id
+        )
+    
+    if contact_info["email"]:
+        collected_data[session_id]["email"] = contact_info["email"]
+        add_lead(
+            email=contact_info["email"],
+            product=collected_data[session_id].get("produkt"),
+            session_id=session_id
+        )
 
 # Funkcja rozszerzająca krótkie pytania
 def expand_query_with_context(user_message: str, session_id: str) -> str:
@@ -218,7 +293,7 @@ def ask_wafam_bot(user_message: str, session_id: str) -> dict:
     
     history = conversations[session_id]
     
-    # Aktualizuj zebrane dane
+    # Aktualizuj zebrane dane (w tym leady)
     update_collected_data(session_id, user_message)
     
     # Rozpoznaj intencję
@@ -250,18 +325,16 @@ PYTANIE KLIENTA: {user_message}
 
 Odpowiedz KONKRETNIE na pytanie klienta. Nie zmieniaj tematu."""
 
-    # Dodaj do historii (tylko ostatnie pytanie, nie cały prompt)
+    # Dodaj do historii
     history.append({"role": "user", "content": user_message})
     
-    # Zbuduj wiadomości dla API - ostatnie 4 wiadomości
+    # Zbuduj wiadomości dla API
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     
-    # Dodaj skróconą historię
     recent_history = history[-4:] if len(history) > 4 else history
-    for msg in recent_history[:-1]:  # Wszystko oprócz ostatniego
+    for msg in recent_history[:-1]:
         messages.append({"role": msg["role"], "content": msg["content"][:150]})
     
-    # Dodaj aktualne pytanie z pełnym kontekstem
     messages.append({"role": "user", "content": user_prompt})
     
     # Wyślij do OpenAI
@@ -277,7 +350,6 @@ Odpowiedz KONKRETNIE na pytanie klienta. Nie zmieniaj tematu."""
     # Dodaj odpowiedź do historii
     history.append({"role": "assistant", "content": bot_response})
     
-    # Ogranicz historię
     if len(history) > 8:
         conversations[session_id] = history[-8:]
     else:
@@ -296,7 +368,7 @@ def home():
     return {
         "status": "online",
         "message": "WAFAM Chatbot API",
-        "version": "2.6"
+        "version": "2.7"
     }
 
 # ENDPOINT: Czat
@@ -316,6 +388,19 @@ def clear_conversation(session_id: str = "default"):
         del collected_data[session_id]
     return {"status": "Rozmowa wyczyszczona", "session_id": session_id}
 
+# ENDPOINT: Lista leadów
+@app.get("/leads")
+def get_leads(status: str = None):
+    leads_list = load_leads()
+    
+    if status:
+        leads_list = [l for l in leads_list if l.get("status") == status]
+    
+    return {
+        "total": len(leads_list),
+        "leads": leads_list
+    }
+
 # ENDPOINT: Szukaj w bazie
 @app.get("/search")
 def search(query: str, limit: int = 2):
@@ -331,17 +416,11 @@ def search(query: str, limit: int = 2):
 # ENDPOINT: Info
 @app.get("/info")
 def info():
+    leads_list = load_leads()
     return {
         "project": "WAFAM Sales Chatbot",
         "author": "Kajetan Holdan",
-        "version": "2.6",
-        "features": ["RAG", "Intent Detection", "Context Memory", "Data Collection"]
-    }
-
-# ENDPOINT: Lista leadów
-@app.get("/leads")
-def get_leads():
-    return {
-        "total": len(leads),
-        "leads": leads
+        "version": "2.7",
+        "features": ["RAG", "Intent Detection", "Context Memory", "Lead Collection"],
+        "total_leads": len(leads_list)
     }
