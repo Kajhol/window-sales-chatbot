@@ -1,6 +1,6 @@
 # 🏠 Window Sales Chatbot
 
-![Status](https://img.shields.io/badge/Status-In%20Progress-yellow)
+![Status](https://img.shields.io/badge/Status-Temporary%20Paused-orange)
 ![Version](https://img.shields.io/badge/Version-2.0-blue)
 ![Python](https://img.shields.io/badge/Python-3.12-green)
 ![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o--mini-orange)
